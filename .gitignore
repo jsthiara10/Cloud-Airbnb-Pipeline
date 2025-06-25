@@ -1,0 +1,35 @@
+# Terraform state
+*.tfstate
+*.tfstate.backup
+
+# Crash logs
+crash.log
+
+# Local Terraform directories
+.terraform/
+
+# Sensitive vars (only if you're using .tfvars for real credentials)
+terraform.tfvars
+
+
+# IDE/Editor junk (optional)
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+
+# Python virtualenv (optional if using one)
+.env/
+.venv/
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore files - provide Kaggle link in repo instead
+*.csv
+*.xlsx
+
+# === OS Files ===
+.DS_Store
+Thumbs.db

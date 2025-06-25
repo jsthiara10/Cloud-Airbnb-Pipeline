@@ -1,0 +1,8 @@
+gcloud functions deploy clean_airbnb_data \
+  --gen2 \
+  --runtime python310 \
+  --region europe-west2 \
+  --entry-point main \
+  --trigger-event google.cloud.storage.object.v1.finalized \
+  --trigger-resource airbnb-data-raw \
+  --set-env-vars CLEAN_BUCKET=airbnb-data-clean

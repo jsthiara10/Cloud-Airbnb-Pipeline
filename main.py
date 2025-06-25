@@ -1,28 +1,40 @@
-import pandas as pd
-from pipeline import AirbnbCleaner
-from pathlib import Path
+import os
+from google.cloud import storage
+from pipeline import run_pipeline  # from your existing code
 
-# Input and Output Paths
-input_path = Path("data/raw/AB_NYC_2019.csv")
-output_path = Path("data/cleaned/AB_NYC_2019_cleaned.csv")
-excel_path = Path("data/cleaned/AB_NYC_2019_cleaned_by_neighbourhood.xlsx")
+def main(event, context):
+    # Extract file info from the event
+    bucket_name = event['bucket']
+    file_name = event['name']
 
-# Load the raw data
+    # Only process CSV files
+    if not file_name.endswith(".csv"):
+        print(f"Skipped non-CSV file: {file_name}")
+        return
 
-df = pd.read_csv(input_path)
+    # Define input/output paths
+    input_path = f"/tmp/{file_name}"
+    output_path = f"/tmp/cleaned_{file_name}"
 
-# Run the cleaner
+    # Get the clean bucket from environment variable
+    clean_bucket_name = os.environ.get("CLEAN_BUCKET")
+    if not clean_bucket_name:
+        raise Exception("CLEAN_BUCKET environment variable not set.")
 
-cleaner = AirbnbCleaner(df)
-cleaned_df = cleaner.clean()
+    # Set up client
+    client = storage.Client()
 
-# Save cleaned CSV
-cleaned_df.to_csv(output_path, index=False)
+    # Download file from raw bucket
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(file_name)
+    blob.download_to_filename(input_path)
+    print(f"Downloaded {file_name} from {bucket_name}")
 
-# Save Excel sheets per neighbourhood_group
+    # Run transformation
+    run_pipeline(input_path, output_path)
 
-with pd.ExcelWriter(excel_path, engine='xlsxwriter') as writer:
-    for group, group_df in cleaned_df.groupby("neighbourhood_group"):
-        group_df.to_excel(writer, sheet_name=group, index=False)
-
-print("Data cleaning complete. CSV and Excel generated.")
+    # Upload to clean bucket
+    clean_bucket = client.bucket(clean_bucket_name)
+    clean_blob = clean_bucket.blob(file_name)
+    clean_blob.upload_from_filename(output_path)
+    print(f"Uploaded cleaned file to {clean_bucket_name}/{file_name}")

@@ -5,19 +5,17 @@ import logging
 import os
 from datetime import datetime
 
-# Configure the logger
+# Configure the logger - logging is optional for GCP
 
-log_dir = "logs"
-os.makedirs(log_dir, exist_ok=True)
-
-log_file = os.path.join(log_dir, f"pipeline_{datetime.now().strftime('%Y-%m-%d')}.log")
-
-
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s — %(levelname)s — %(message)s"
-)
+if os.getenv("RUNNING_IN_GCP") != "true":
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, f"pipeline_{datetime.now().strftime('%Y-%m-%d')}.log")
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s"
+    )
 
 class AirbnbCleaner:
     def __init__(self, df: pd.DataFrame): # the constructor takes the pandas df as input and makes a copy of it to

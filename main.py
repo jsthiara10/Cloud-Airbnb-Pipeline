@@ -4,6 +4,31 @@ from google.cloud import bigquery
 from pipeline import run_pipeline  # from your existing code
 
 
+def load_csv_to_bigquery(uri: str, dataset_id: str, table_id: str, project_id: str):
+    client = bigquery.Client(project=project_id)
+
+    dataset_ref = client.dataset(dataset_id)
+    table_ref = dataset_ref.table(table_id)
+
+    job_config = bigquery.LoadJobConfig(
+        source_format=bigquery.SourceFormat.CSV,
+        skip_leading_rows=1,
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
+        autodetect=True,
+    )
+
+    load_job = client.load_table_from_uri(
+        uri,
+        table_ref,
+        job_config=job_config
+    )
+    load_job.result()
+
+    destination_table = client.get_table(table_ref)
+    print(f"Loaded {destination_table.num_rows} rows into {dataset_id}:{table_id}.")
+
+
 def main(event, context):
     # Extract file info from the event
     bucket_name = event['bucket']
@@ -48,28 +73,3 @@ def main(event, context):
         table_id=os.environ.get("BQ_TABLE"),
         project_id=os.environ.get("GCP_PROJECT")  # or set your project ID some other way
     )
-
-
-def load_csv_to_bigquery(uri: str, dataset_id: str, table_id: str, project_id: str):
-    client = bigquery.Client(project=project_id)
-
-    dataset_ref = client.dataset(dataset_id)
-    table_ref = dataset_ref.table(table_id)
-
-    job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.CSV,
-        skip_leading_rows=1,
-        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
-        schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
-        autodetect=True,
-    )
-
-    load_job = client.load_table_from_uri(
-        uri,
-        table_ref,
-        job_config=job_config
-    )
-    load_job.result()
-
-    destination_table = client.get_table(table_ref)
-    print(f"Loaded {destination_table.num_rows} rows into {dataset_id}:{table_id}.")

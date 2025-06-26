@@ -1,4 +1,4 @@
-# **Airbnb Data ETL Pipeline on Google Cloud (IN-DEVELOPMENT) **
+# Airbnb Data ETL Pipeline on Google Cloud (IN-DEVELOPMENT)
 
 This repository contains an ETL pipeline that processes Airbnb CSV data in Google Cloud Platform (GCP) using Cloud Storage, Cloud Functions, and BigQuery.
 

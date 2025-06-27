@@ -7,3 +7,5 @@ argparse
 datetime
 xlsxwriter
 google-cloud-storage
+google-cloud-bigquery
+google-api-core>=2.0.0

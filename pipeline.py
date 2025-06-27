@@ -6,7 +6,6 @@ import os
 from datetime import datetime
 
 # Configure the logger - logging is optional for GCP
-
 if os.getenv("RUNNING_IN_GCP") != "true":
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
@@ -17,16 +16,17 @@ if os.getenv("RUNNING_IN_GCP") != "true":
         format="%(asctime)s - %(levelname)s - %(message)s"
     )
 
+
 class AirbnbCleaner:
-    def __init__(self, df: pd.DataFrame): # the constructor takes the pandas df as input and makes a copy of it to
-        # avoid modifying the original
+    def __init__(self, df: pd.DataFrame):
         self.df = df.copy()
 
-    def clean(self): # these apply all the individual cleaning steps in order
+    def clean(self):
         self.drop_duplicates()
         self.drop_nulls()
         self.clean_host_name()
         self.remove_zero_reviews()
+        self.clean_quotation_marks()
         logging.info("Finished cleaning process")
         return self.df
 
@@ -54,21 +54,27 @@ class AirbnbCleaner:
 
         self.df["host_name"] = self.df["host_name"].apply(clean_name)
 
-    def _split_camel_case(self, name: str) -> str: # makes strings consistent e.g. John Smith, instead of 'John smith'
+    def _split_camel_case(self, name: str) -> str:
         return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", name)
 
     def _replace_and(self, name: str) -> str:
         return re.sub(r"\band\b", "&", name, flags=re.IGNORECASE)
 
-    """Remove listings that have 0 number of reviews"""
-
     def remove_zero_reviews(self):
         before = self.df.shape[0]
         self.df = self.df[self.df["number_of_reviews"] > 0]
         after = self.df.shape[0]
-        logging.info(f"Removed 0-review listings: {before-after} rows dropped. ")
+        logging.info(f"Removed 0-review listings: {before - after} rows dropped.")
 
-# 🧪 CLI Runner
+    def clean_quotation_marks(self):
+        """Remove unescaped double quotes from all string columns"""
+        string_columns = self.df.select_dtypes(include='object').columns
+        for col in string_columns:
+            self.df[col] = self.df[col].astype(str).str.replace('"', '', regex=False)
+        logging.info("Removed problematic quote characters from string columns.")
+
+
+# CLI Runner
 def run_pipeline(input_path, output_path):
     df = pd.read_csv(input_path)
     cleaner = AirbnbCleaner(df)
@@ -84,4 +90,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_pipeline(args.input, args.output)
-

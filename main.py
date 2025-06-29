@@ -82,7 +82,8 @@ def main(event, context):
     print(f"Downloaded {file_name} from {bucket_name}")
 
     # Run transformation
-    run_pipeline(input_path, output_path)
+    schema_path = os.getenv("SCHEMA_PATH", "schemas/airbnb.json")
+    run_pipeline(input_path, output_path, schema_path=schema_path)
 
     # Upload to clean bucket
     clean_bucket = client.bucket(clean_bucket_name)

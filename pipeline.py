@@ -4,6 +4,8 @@ import argparse
 import logging
 import os
 from datetime import datetime
+from utils import remove_index_like_columns, load_schema, validate_columns
+import csv
 
 # Configure the logger - logging is optional for GCP
 if os.getenv("RUNNING_IN_GCP") != "true":
@@ -75,11 +77,23 @@ class AirbnbCleaner:
 
 
 # CLI Runner
-def run_pipeline(input_path, output_path):
+
+def run_pipeline(input_path, output_path, schema_path=None):
     df = pd.read_csv(input_path)
+
     cleaner = AirbnbCleaner(df)
     cleaned_df = cleaner.clean()
-    cleaned_df.to_csv(output_path, index=False)
+
+    # 🧹 Remove rogue index-like columns before validating
+    cleaned_df = remove_index_like_columns(cleaned_df)
+
+    # ✅ Optional: Validate against schema
+    if schema_path:
+        expected_columns = load_schema(schema_path)
+        validate_columns(cleaned_df, expected_columns)
+
+    # 💾 Save cleaned file
+    cleaned_df.to_csv(output_path, index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
     print("✅ Data cleaned and saved to:", output_path)
 
 

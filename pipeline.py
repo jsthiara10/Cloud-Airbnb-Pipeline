@@ -4,6 +4,8 @@ import argparse
 import logging
 import os
 from datetime import datetime
+from utils import remove_index_like_columns, load_schema, validate_columns
+import csv
 
 # Configure the logger - logging is optional for GCP
 if os.getenv("RUNNING_IN_GCP") != "true":
@@ -24,6 +26,8 @@ class AirbnbCleaner:
     def clean(self):
         self.drop_duplicates()
         self.drop_nulls()
+        self.enclose_in_quotes("name")
+        self.enclose_in_quotes("host_name")
         self.clean_host_name()
         self.remove_zero_reviews()
         self.clean_quotation_marks()
@@ -41,6 +45,12 @@ class AirbnbCleaner:
         self.df.dropna(inplace=True)
         after = self.df.shape[0]
         logging.info(f"Removed nulls: {before - after} rows dropped.")
+
+    def enclose_in_quotes(self, column_name):
+        if column_name in self.df.columns:
+            self.df[column_name] = self.df[column_name].apply(
+                lambda x: f'"{x}"' if pd.notnull(x) and not str(x).startswith('"') else x)
+
 
     def clean_host_name(self):
         def clean_name(name):
@@ -75,11 +85,23 @@ class AirbnbCleaner:
 
 
 # CLI Runner
-def run_pipeline(input_path, output_path):
+
+def run_pipeline(input_path, output_path, schema_path=None):
     df = pd.read_csv(input_path)
+
     cleaner = AirbnbCleaner(df)
     cleaned_df = cleaner.clean()
-    cleaned_df.to_csv(output_path, index=False)
+
+    # 🧹 Remove rogue index-like columns before validating
+    cleaned_df = remove_index_like_columns(cleaned_df)
+
+    # ✅ Optional: Validate against schema
+    if schema_path:
+        expected_columns = load_schema(schema_path)
+        validate_columns(cleaned_df, expected_columns)
+
+    # 💾 Save cleaned file
+    cleaned_df.to_csv(output_path, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
     print("✅ Data cleaned and saved to:", output_path)
 
 

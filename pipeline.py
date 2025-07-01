@@ -26,6 +26,8 @@ class AirbnbCleaner:
     def clean(self):
         self.drop_duplicates()
         self.drop_nulls()
+        self.enclose_in_quotes("name")
+        self.enclose_in_quotes("host_name")
         self.clean_host_name()
         self.remove_zero_reviews()
         self.clean_quotation_marks()
@@ -43,6 +45,12 @@ class AirbnbCleaner:
         self.df.dropna(inplace=True)
         after = self.df.shape[0]
         logging.info(f"Removed nulls: {before - after} rows dropped.")
+
+    def enclose_in_quotes(self, column_name):
+        if column_name in self.df.columns:
+            self.df[column_name] = self.df[column_name].apply(
+                lambda x: f'"{x}"' if pd.notnull(x) and not str(x).startswith('"') else x)
+
 
     def clean_host_name(self):
         def clean_name(name):
@@ -93,7 +101,7 @@ def run_pipeline(input_path, output_path, schema_path=None):
         validate_columns(cleaned_df, expected_columns)
 
     # 💾 Save cleaned file
-    cleaned_df.to_csv(output_path, index=False, encoding='utf-8', quoting=csv.QUOTE_ALL)
+    cleaned_df.to_csv(output_path, index=False, quoting=csv.QUOTE_ALL, encoding='utf-8')
     print("✅ Data cleaned and saved to:", output_path)
 
 

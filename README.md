@@ -65,7 +65,7 @@ Quote all fields
 
 Save to data/cleaned/
 
-Step 2: Upload to GCS (Raw Bucket)
+### Step 2: Upload to GCS (Raw Bucket)
 ```
 gsutil cp data/cleaned/AB_NYC_2019_cleaned.csv gs://your-raw-bucket-name/
 ```

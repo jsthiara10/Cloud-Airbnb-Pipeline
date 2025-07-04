@@ -2,6 +2,10 @@
 
 This project delivers a scalable, modular data pipeline to clean and load NYC Airbnb listings into Google BigQuery. It supports both local testing and production-grade GCP deployment.
 
+### Link to Dataset:
+
+https://www.kaggle.com/datasets/dgomonov/new-york-city-airbnb-open-data
+
 ### 📁 Project Structure
 ```
 .

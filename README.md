@@ -17,14 +17,14 @@ This project delivers a scalable, modular data pipeline to clean and load NYC Ai
 └── README.md                 # This file
 ```
 
-✅ Key Features
+## ✅ Key Features
 🔄 End-to-end CSV ingestion, cleaning, and BigQuery loading
 
 🔍 Cleans name and host_name fields and safely encloses them in double quotes
 
 📦 Prevents column shifting by quoting all values
 
-🧼 Removes:
+## 🧼 Removes:
 
 Duplicate rows
 
@@ -36,7 +36,7 @@ Listings with 0 reviews
 
 🧪 Fully testable on-premises, deployable to GCP
 
-🛠️ Infrastructure
+## 🛠️ Infrastructure
 This project assumes you have:
 
 A raw GCS bucket (for unprocessed files)

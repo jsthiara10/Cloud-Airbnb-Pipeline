@@ -2,7 +2,7 @@
 
 This project delivers a scalable, modular data pipeline to clean and load NYC Airbnb listings into Google BigQuery. It supports both local testing and production-grade GCP deployment.
 
-📁 Project Structure
+### 📁 Project Structure
 ```
 .
 ├── pipeline.py               # Main data cleaning logic
@@ -36,8 +36,8 @@ Listings with 0 reviews
 
 🧪 Fully testable on-premises, deployable to GCP
 
-## 🛠️ Infrastructure
-This project assumes you have:
+## 🛠️ Infrastructure:
+### This project assumes you have:
 
 A raw GCS bucket (for unprocessed files)
 
@@ -47,15 +47,15 @@ A BigQuery dataset and table for loading cleaned data
 
 ✅ Optional: Buckets and other resources can be provisioned using Terraform (terraform/) or manually created in the GCP Console.
 
-⚙️ Local Usage
-Step 1: Run the cleaning pipeline locally
+### ⚙️ Local Usage
+### Step 1: Run the cleaning pipeline locally
 ```
 python pipeline.py \
   --input data/raw/AB_NYC_2019.csv \
   --output data/cleaned/AB_NYC_2019_cleaned.csv
 ```
 
-This will:
+### This will:
 
 Remove duplicates and nulls
 
@@ -70,9 +70,9 @@ Step 2: Upload to GCS (Raw Bucket)
 gsutil cp data/cleaned/AB_NYC_2019_cleaned.csv gs://your-raw-bucket-name/
 ```
 
-If deployed, this triggers the Cloud Function automatically.
+### If deployed, this triggers the Cloud Function automatically.
 
-☁️ GCP Cloud Function
+## ☁️ GCP Cloud Function
 When triggered, main.py:
 
 Downloads the CSV from the raw bucket
@@ -83,7 +83,7 @@ Uploads the result to the clean bucket
 
 Loads the cleaned file into BigQuery
 
-🔄 BigQuery LoadJobConfig (Used in main.py)
+## 🔄 BigQuery LoadJobConfig (Used in main.py)
 ```
 job_config = bigquery.LoadJobConfig(
     source_format=bigquery.SourceFormat.CSV,
@@ -95,15 +95,15 @@ job_config = bigquery.LoadJobConfig(
 )
 ```
 
-🔐 IAM Permissions
+## 🔐 IAM Permissions
 Ensure your Cloud Function service account has:
 
-Role	Purpose
-roles/storage.objectViewer	Read from raw bucket
+Role & Purpose:
+roles/storage.objectViewer Read from raw bucket
 roles/storage.objectCreator	Write to clean bucket
 roles/bigquery.dataEditor	Load data into BigQuery
 
-🛠️ Manual Import into BigQuery
+## 🛠️ Manual Import into BigQuery
 Use the bq CLI if you want to load the cleaned CSV manually:
 
 ```
@@ -117,14 +117,14 @@ bq load \
   ./data/cleaned/AB_NYC_2019_cleaned.csv
 ```
 
-📌 Common Issues Solved
+## 📌 Common Issues Solved
 Problem	Solution
 Shifting columns / wrong data alignment	Use quotechar='"' and quoting=csv.QUOTE_ALL
 Broken rows / too many values	Enclose name and host_name in quotes
 Rogue index columns	Utility added to drop index-like or unnamed columns
 Encoding problems	Ensured consistent UTF-8 encoding
 
-🧰 Future Improvements
+## 🧰 Future Improvements
  Add unit tests (pytest)
 
  Add DAG scheduling with Cloud Composer or Scheduler
@@ -133,6 +133,6 @@ Encoding problems	Ensured consistent UTF-8 encoding
 
  Support for JSON and semi-structured formats
 
-🙌 Acknowledgments
-Thanks to everyone who contributed ideas, tests, and bugs during the pipeline’s PoC phase!
+## 🙌 Acknowledgments
+Thanks to everyone who contributed ideas, tests, and bugs during the pipeline’s PoC phase! Suggestions for improvement are welcome.
 

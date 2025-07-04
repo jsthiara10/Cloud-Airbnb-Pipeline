@@ -1,192 +1,137 @@
-# Airbnb Data ETL Pipeline on Google Cloud (IN-DEVELOPMENT)
+🏡 Airbnb NYC Data Pipeline – GCP Production Rollout
+This project delivers a scalable, modular data pipeline to clean and load NYC Airbnb listings into Google BigQuery. It supports both local testing and production-grade GCP deployment.
 
-This repository contains an ETL pipeline that processes Airbnb CSV data in Google Cloud Platform (GCP) using Cloud Storage, Cloud Functions, and BigQuery.
-
-It reads raw CSV files dropped into a GCS bucket, cleans and transforms them, writes cleaned CSVs to a separate bucket, and loads the data into BigQuery with automatic schema updates.
-
-## Table of Contents
-
-Prerequisites
-
-Setup
-
-Terraform Infrastructure
-
-Deploying Cloud Function
-
-Testing the Pipeline
-
-BigQuery Table Management
-
-Running Locally
-
-IAM Roles
-
-Useful GCP Documentation
-
-Important Notes
-
-## Prerequisites
-
-Google Cloud SDK installed and configured (Installation guide)
-
-Terraform installed (Installation guide)
-
-Python 3.10+
-
-GCP Project with billing enabled
-
-Service Account with the necessary permissions (see IAM Roles)
-
-# Setup
-
-### Clone this repository
-
-```bash
-git clone https://github.com/your-repo/airbnb-etl-gcp.git
-cd airbnb-etl-gcp
+📁 Project Structure
 ```
-## Configure your environment variables
-
-### Create a .env file in the project root (optional but recommended):
-
-```
-PROJECT_ID=your-gcp-project-id
-REGION=europe-west2
-RAW_BUCKET_NAME=airbnb-data-raw
-CLEAN_BUCKET_NAME=airbnb-data-clean
-BIGQUERY_DATASET=your_bigquery_dataset
-BIGQUERY_TABLE=your_bigquery_table
+.
+├── pipeline.py               # Main data cleaning logic
+├── main.py                   # GCP Cloud Function entrypoint
+├── utils.py                  # Reusable helpers (validation, quoting, etc.)
+├── requirements.txt          # Python dependencies
+├── /data/
+│   ├── raw/                  # Local raw CSV files
+│   └── cleaned/              # Locally cleaned output files
+├── /logs/                    # Local run logs
+├── /gcf/                     # GCP deployment config
+└── README.md                 # This file
 ```
 
-### Load variables (example for macOS/Linux):
+✅ Key Features
+🔄 End-to-end CSV ingestion, cleaning, and BigQuery loading
+
+🔍 Cleans name and host_name fields and safely encloses them in double quotes
+
+📦 Prevents column shifting by quoting all values
+
+🧼 Removes:
+
+Duplicate rows
+
+Null values
+
+Listings with 0 reviews
+
+🧠 Validates DataFrame to remove rogue index-like columns
+
+🧪 Fully testable on-premises, deployable to GCP
+
+🛠️ Infrastructure
+This project assumes you have:
+
+A raw GCS bucket (for unprocessed files)
+
+A clean GCS bucket (for cleaned files)
+
+A BigQuery dataset and table for loading cleaned data
+
+✅ Optional: Buckets and other resources can be provisioned using Terraform (terraform/) or manually created in the GCP Console.
+
+⚙️ Local Usage
+Step 1: Run the cleaning pipeline locally
 ```
-export $(grep -v '^#' .env | xargs)
+python pipeline.py \
+  --input data/raw/AB_NYC_2019.csv \
+  --output data/cleaned/AB_NYC_2019_cleaned.csv
 ```
 
-# **Initialise Terraform**
+This will:
 
+Remove duplicates and nulls
+
+Enclose key fields in double quotes
+
+Quote all fields
+
+Save to data/cleaned/
+
+Step 2: Upload to GCS (Raw Bucket)
 ```
-terraform init
+gsutil cp data/cleaned/AB_NYC_2019_cleaned.csv gs://your-raw-bucket-name/
 ```
 
-**Apply Terraform to create buckets**
+If deployed, this triggers the Cloud Function automatically.
 
-````
-terraform apply
-````
-Follow prompts to confirm.
+☁️ GCP Cloud Function
+When triggered, main.py:
 
-Terraform Infrastructure
-Two GCS buckets created:
+Downloads the CSV from the raw bucket
 
-Raw bucket for landing raw CSVs
+Cleans the data via AirbnbCleaner
 
-Clean bucket for storing cleaned CSVs
+Uploads the result to the clean bucket
 
-Buckets have versioning and uniform bucket-level access enabled
+Loads the cleaned file into BigQuery
 
-## **Deploying Cloud Function**
-
-Deploy your transformation Cloud Function (Python 3.10 runtime, 2nd gen):
-
+🔄 BigQuery LoadJobConfig (Used in main.py)
 ```
-gcloud functions deploy clean_airbnb_data \
-  --gen2 \
-  --runtime python310 \
-  --region $REGION \
-  --entry-point main \
-  --trigger-event google.cloud.storage.object.v1.finalized \
-  --trigger-resource $RAW_BUCKET_NAME \
-  --set-env-vars CLEAN_BUCKET=$CLEAN_BUCKET_NAME,BQ_DATASET=$BIGQUERY_DATASET,BQ_TABLE=$BIGQUERY_TABLE
-  ```
-The function triggers on any new object in the raw bucket.
+job_config = bigquery.LoadJobConfig(
+    source_format=bigquery.SourceFormat.CSV,
+    skip_leading_rows=1,
+    write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+    autodetect=True,
+    quote_character='"',
+    max_bad_records=1000
+)
+```
 
-It runs the cleaning pipeline, writes cleaned CSV to the clean bucket, then loads the data into BigQuery.
+🔐 IAM Permissions
+Ensure your Cloud Function service account has:
 
-## **Testing the Pipeline**
+Role	Purpose
+roles/storage.objectViewer	Read from raw bucket
+roles/storage.objectCreator	Write to clean bucket
+roles/bigquery.dataEditor	Load data into BigQuery
 
-Upload a CSV file to the raw bucket:
-
-````
-gsutil cp path/to/your-file.csv gs://$RAW_BUCKET_NAME/
-````
-
-Monitor logs to ensure processing:
-
-````
-gcloud functions logs read clean_airbnb_data --gen2 --region $REGION --limit 20
-````
-
-Verify the cleaned CSV appears in the clean bucket:
-
-````
-gsutil ls gs://$CLEAN_BUCKET_NAME/
-````
-
-Verify BigQuery table is created or updated with data:
-
-````
-bq show $BIGQUERY_DATASET.$BIGQUERY_TABLE
-bq head --max_rows=10 $BIGQUERY_DATASET.$BIGQUERY_TABLE
-````
-
-BigQuery Table Management
-
-The Cloud Function will create the BigQuery table if it does not exist, inferring schema from CSV.
-
-Each new processed CSV replaces the table (WRITE_TRUNCATE).
-
-Schema drift is handled by allowing new columns to be added dynamically (ALLOW_FIELD_ADDITION).
-
-Running Locally
-You can also run the cleaning pipeline locally for testing:
-
-````
-python pipeline.py --input path/to/raw.csv --output path/to/clean.csv
-````
-
-IAM Roles
-Ensure the Cloud Function’s service account (and your user account if applicable) have these roles assigned:
-
-Role Name	Purpose	GCP Documentation Link
-Storage Admin	Manage Cloud Storage buckets and objects	https://cloud.google.com/storage/docs/access-control/iam-roles
-Cloud Functions Developer	Deploy and manage Cloud Functions	https://cloud.google.com/functions/docs/securing/managing-access#roles
-BigQuery Admin or BigQuery Data Editor	Create and modify BigQuery datasets and tables, load data	https://cloud.google.com/bigquery/docs/access-control#roles
-
-You can assign roles via the Cloud Console IAM page or use gcloud CLI, e.g.:
+🛠️ Manual Import into BigQuery
+Use the bq CLI if you want to load the cleaned CSV manually:
 
 ```
-gcloud projects add-iam-policy-binding your-project-id \
-  --member=serviceAccount:your-function-sa@your-project-id.iam.gserviceaccount.com \
-  --role=roles/storage.admin
-  ```
+bq load \
+  --source_format=CSV \
+  --skip_leading_rows=1 \
+  --replace \
+  --quote='"' \
+  --max_bad_records=1000 \
+  project_id:dataset.table \
+  ./data/cleaned/AB_NYC_2019_cleaned.csv
+```
 
-Useful GCP Documentation
-Cloud Storage IAM Roles:
-https://cloud.google.com/storage/docs/access-control/iam-roles
+📌 Common Issues Solved
+Problem	Solution
+Shifting columns / wrong data alignment	Use quotechar='"' and quoting=csv.QUOTE_ALL
+Broken rows / too many values	Enclose name and host_name in quotes
+Rogue index columns	Utility added to drop index-like or unnamed columns
+Encoding problems	Ensured consistent UTF-8 encoding
 
-Cloud Functions IAM Roles and Permissions:
-https://cloud.google.com/functions/docs/securing/managing-access#roles
+🧰 Future Improvements
+ Add unit tests (pytest)
 
-BigQuery IAM Roles:
-https://cloud.google.com/bigquery/docs/access-control#roles
+ Add DAG scheduling with Cloud Composer or Scheduler
 
-Deploying 2nd Gen Cloud Functions:
-https://cloud.google.com/functions/docs/concepts/2nd-gen
+ Add monitoring & alerting (Cloud Monitoring)
 
-BigQuery Load Job Reference:
-https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs#configuration.load
+ Support for JSON and semi-structured formats
 
-Important Notes
-Make sure your Cloud Function service account has the necessary IAM roles.
-
-This pipeline is designed to run on any OS (Windows, macOS, Linux). Ensure environment variables and SDKs are set accordingly.
-
-Logs are essential for debugging — use gcloud functions logs read to monitor.
-
-If schema changes happen often, validate BigQuery schema after each load.
-
-Feel free to open issues or reach out for help!
-Happy data cleaning and analyzing! 🚀
+🙌 Acknowledgments
+Thanks to everyone who contributed ideas, tests, and bugs during the pipeline’s PoC phase!
 

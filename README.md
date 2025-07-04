@@ -1,4 +1,4 @@
-***🏡 Airbnb NYC Data Pipeline – GCP Production Rollout***
+# 🏡 Airbnb NYC Data Pipeline – GCP Production Rollout #
 
 This project delivers a scalable, modular data pipeline to clean and load NYC Airbnb listings into Google BigQuery. It supports both local testing and production-grade GCP deployment.
 
